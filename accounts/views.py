@@ -4,6 +4,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import permissions
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from django.contrib.auth import authenticate
 from django.contrib.contenttypes.models import ContentType
@@ -18,6 +20,7 @@ from organization.models import Domain, Organization, Department, Wing, Membersh
 # SIGNUP
 # ------------------------------------------------
 
+@method_decorator(csrf_exempt, name='dispatch')
 class SignupView(generics.CreateAPIView):
 
     serializer_class = SignupSerializer
@@ -66,6 +69,7 @@ class SignupView(generics.CreateAPIView):
 # LOGIN
 # ------------------------------------------------
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(generics.GenericAPIView):
 
     serializer_class = LoginSerializer
@@ -73,13 +77,22 @@ class LoginView(generics.GenericAPIView):
 
     def post(self, request):
 
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"LOGIN REQUEST DATA: {request.data}")
+        logger.error(f"LOGIN CONTENT TYPE: {request.content_type}")
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         identifier = serializer.validated_data["identifier"]
         password = serializer.validated_data["password"]
 
+        logger.error(f"LOGIN IDENTIFIER: {identifier}, PASSWORD LENGTH: {len(password)}")
+
         user = authenticate(request, identifier=identifier, password=password)
+
+        logger.error(f"LOGIN USER: {user}")
 
         if not user:
             return Response(
