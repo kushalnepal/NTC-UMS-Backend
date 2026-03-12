@@ -25,7 +25,13 @@ SECRET_KEY = 'django-insecure-43lvw&x29wl7dvl=i*d5@iyh*r@#1xz!%0k2-jh_0n=qm^@v%n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'ntc-ums-frontend.kushalnepal.com.np',
+    'ntc-ums-frontend-black.vercel.app',
+    'audriana-nonflyable-nonarbitrarily.ngrok-free.dev',
+]
 
 
 # Application definition
@@ -155,6 +161,9 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://ntc-ums-frontend.kushalnepal.com.np",
+    "https://ntc-ums-frontend-black.vercel.app",
+    "https://audriana-nonflyable-nonarbitrarily.ngrok-free.dev",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
