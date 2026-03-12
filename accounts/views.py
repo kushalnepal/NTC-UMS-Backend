@@ -92,6 +92,7 @@ class LoginView(generics.GenericAPIView):
         memberships = Membership.objects.filter(user=user)
 
         memberships_data = []
+        domains = []
 
         for m in memberships:
 
@@ -104,12 +105,25 @@ class LoginView(generics.GenericAPIView):
                 "role": m.role.name
             })
 
+            # Collect domains from memberships
+            if isinstance(entity, Domain):
+                domains.append(str(entity.id))
+            elif isinstance(entity, Organization):
+                domains.append(str(entity.domain.id))
+            elif isinstance(entity, Department):
+                domains.append(str(entity.organization.domain.id))
+            elif isinstance(entity, Wing):
+                domains.append(str(entity.department.organization.domain.id))
+
+        domains = list(set(domains))
+
         return Response({
             "user": {
                 "id": str(user.id),
                 "username": user.username,
                 "email": user.email,
-                "phone": user.phone
+                "phone": user.phone,
+                "domains": domains
             },
             "memberships": memberships_data,
             "access": str(refresh.access_token),
@@ -165,74 +179,83 @@ class HierarchyMembersView(APIView):
 
     def get(self, request):
 
-        user = request.user
-        membership = Membership.objects.filter(user=user).first()
+        try:
+            user = request.user
+            membership = Membership.objects.filter(user=user).first()
 
-        if not membership:
-            return Response({"message": "User has no hierarchy"}, status=404)
+            if not membership:
+                return Response({"message": "User has no hierarchy"}, status=404)
 
-        entity = membership.entity
+            entity = membership.entity
 
-        result = {
-            "domains": [],
-            "organizations": [],
-            "departments": [],
-            "wings": [],
-            "users": []
-        }
+            result = {
+                "domains": [],
+                "organizations": [],
+                "departments": [],
+                "wings": [],
+                "users": []
+            }
 
-        # DOMAIN LEVEL
-        if isinstance(entity, Domain):
+            # DOMAIN LEVEL
+            if isinstance(entity, Domain):
 
-            orgs = Organization.objects.filter(domain=entity)
-            depts = Department.objects.filter(organization__domain=entity)
-            wings = Wing.objects.filter(department__organization__domain=entity)
+                orgs = Organization.objects.filter(domain=entity)
+                depts = Department.objects.filter(organization__domain=entity)
+                wings = Wing.objects.filter(department__organization__domain=entity)
 
-        # ORGANIZATION LEVEL
-        elif isinstance(entity, Organization):
+            # ORGANIZATION LEVEL
+            elif isinstance(entity, Organization):
 
-            orgs = Organization.objects.filter(id=entity.id)
-            depts = Department.objects.filter(organization=entity)
-            wings = Wing.objects.filter(department__organization=entity)
+                orgs = Organization.objects.filter(id=entity.id)
+                depts = Department.objects.filter(organization=entity)
+                wings = Wing.objects.filter(department__organization=entity)
 
-        # DEPARTMENT LEVEL
-        elif isinstance(entity, Department):
+            # DEPARTMENT LEVEL
+            elif isinstance(entity, Department):
 
-            orgs = Organization.objects.filter(id=entity.organization.id)
-            depts = Department.objects.filter(id=entity.id)
-            wings = Wing.objects.filter(department=entity)
+                orgs = Organization.objects.filter(id=entity.organization.id)
+                depts = Department.objects.filter(id=entity.id)
+                wings = Wing.objects.filter(department=entity)
 
-        # WING LEVEL
-        elif isinstance(entity, Wing):
+            # WING LEVEL
+            elif isinstance(entity, Wing):
 
-            orgs = Organization.objects.filter(id=entity.department.organization.id)
-            depts = Department.objects.filter(id=entity.department.id)
-            wings = Wing.objects.filter(id=entity.id)
+                orgs = Organization.objects.filter(id=entity.department.organization.id)
+                depts = Department.objects.filter(id=entity.department.id)
+                wings = Wing.objects.filter(id=entity.id)
 
-        else:
-            return Response({"message": "Invalid hierarchy"}, status=400)
+            else:
+                return Response({"message": "Invalid hierarchy"}, status=400)
 
-        result["organizations"] = [o.name for o in orgs]
-        result["departments"] = [d.name for d in depts]
-        result["wings"] = [w.name for w in wings]
+            result["organizations"] = [o.name for o in orgs]
+            result["departments"] = [d.name for d in depts]
+            result["wings"] = [w.name for w in wings]
 
-        # Collect users using membership
-        users = []
+            # Collect users using membership
+            users = []
 
-        for m in Membership.objects.select_related("user", "role"):
+            for m in Membership.objects.select_related("user", "role"):
 
-            users.append({
-                "id": str(m.user.id),
-                "username": m.user.username,
-                "email": m.user.email,
-                "phone": m.user.phone,
-                "role": m.role.name,
-                "is_staff": m.user.is_staff
-            })
+                users.append({
+                    "id": str(m.user.id),
+                    "username": m.user.username,
+                    "email": m.user.email,
+                    "phone": m.user.phone,
+                    "role": m.role.name,
+                    "is_staff": m.user.is_staff
+                })
 
-        result["users"] = users
+            result["users"] = users
 
-        return Response(result)
+            return Response(result)
+
+        except Exception as e:
+            import traceback
+            return Response({
+                "message": "Error fetching hierarchy",
+                "error": str(e),
+                "trace": traceback.format_exc()
+            }, status=500)
 
 
     # -------------------------------------------
