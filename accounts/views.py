@@ -89,7 +89,7 @@ class LoginView(generics.GenericAPIView):
 
         refresh = RefreshToken.for_user(user)
 
-        memberships = Membership.objects.filter(user=user)
+        memberships = Membership.objects.filter(user=user).select_related('entity', 'role', 'content_type')
 
         memberships_data = []
         domains = []
@@ -105,15 +105,24 @@ class LoginView(generics.GenericAPIView):
                 "role": m.role.name
             })
 
-            # Collect domains from memberships
-            if isinstance(entity, Domain):
-                domains.append(str(entity.id))
-            elif isinstance(entity, Organization):
-                domains.append(str(entity.domain.id))
-            elif isinstance(entity, Department):
-                domains.append(str(entity.organization.domain.id))
-            elif isinstance(entity, Wing):
-                domains.append(str(entity.department.organization.domain.id))
+            # Collect domains from memberships - use name and handle None safely
+            try:
+                if isinstance(entity, Domain):
+                    domains.append(str(entity.name))
+                elif isinstance(entity, Organization):
+                    if entity.domain:
+                        domains.append(str(entity.domain.name))
+                elif isinstance(entity, Department):
+                    if entity.organization and entity.organization.domain:
+                        domains.append(str(entity.organization.domain.name))
+                elif isinstance(entity, Wing):
+                    if (entity.department and 
+                        entity.department.organization and 
+                        entity.department.organization.domain):
+                        domains.append(str(entity.department.organization.domain.name))
+            except Exception as e:
+                # Skip if any attribute access fails
+                pass
 
         domains = list(set(domains))
 
