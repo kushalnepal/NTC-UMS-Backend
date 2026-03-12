@@ -89,7 +89,7 @@ class LoginView(generics.GenericAPIView):
 
         refresh = RefreshToken.for_user(user)
 
-        memberships = Membership.objects.filter(user=user).select_related('entity', 'role', 'content_type')
+        memberships = Membership.objects.filter(user=user)
 
         memberships_data = []
         domains = []
