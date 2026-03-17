@@ -25,11 +25,9 @@ class SignupSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
 
-    # Hierarchy
-    domain = serializers.UUIDField(required=False)
-    organization = serializers.UUIDField(required=False)
+    # Hierarchy - Optional for admin, but will be validated against creator's organization
     department = serializers.UUIDField(required=False)
-
+    wing = serializers.UUIDField(required=False)
     wing_name = serializers.CharField(required=False, allow_blank=True)
 
     # Role
@@ -41,7 +39,9 @@ class SignupSerializer(serializers.Serializer):
     # ---------------- VALIDATION ---------------- #
 
     def validate(self, data):
-
+        # Get request context to access user
+        request = self.context.get('request')
+        
         # At least one identifier
         if not any([data.get("username"), data.get("email"), data.get("phone")]):
             raise serializers.ValidationError(
@@ -52,23 +52,70 @@ class SignupSerializer(serializers.Serializer):
         if data["password"] != data["password_confirm"]:
             raise serializers.ValidationError("Passwords do not match.")
 
-        # Validate domain
-        domain_id = data.get("domain")
-        if domain_id and not Domain.objects.filter(id=domain_id).exists():
-            raise serializers.ValidationError("Domain does not exist.")
-
-        # Validate organization
-        org_id = data.get("organization")
-        if org_id and not Organization.objects.filter(id=org_id).exists():
-            raise serializers.ValidationError("Organization does not exist.")
-
-        # Validate department
+        # SECURITY: Derive organization from logged-in user's membership
+        # DO NOT trust organization_id from frontend
+        # Check all memberships - user might belong to multiple orgs
+        creator_orgs = []
+        if request and request.user:
+            # Get all creator's memberships
+            memberships = Membership.objects.filter(user=request.user).select_related('content_type')
+            for membership in memberships:
+                entity = membership.entity
+                if isinstance(entity, Organization):
+                    creator_orgs.append(str(entity.id))
+                elif isinstance(entity, Department):
+                    creator_orgs.append(str(entity.organization.id))
+                elif isinstance(entity, Wing):
+                    creator_orgs.append(str(entity.department.organization.id))
+                elif isinstance(entity, Domain):
+                    # Domain admin can create in any org under their domain
+                    creator_orgs = []  # Will allow all
+                    break
+        
+        creator_orgs = list(set(creator_orgs))  # Remove duplicates
+        
+        # Validate department belongs to one of creator's organizations
         dept_id = data.get("department")
-        if dept_id and not Department.objects.filter(id=dept_id).exists():
-            raise serializers.ValidationError("Department does not exist.")
+        if dept_id:
+            try:
+                dept = Department.objects.get(id=dept_id)
+                # If user has org restrictions, check if dept belongs to one of them
+                if creator_orgs and str(dept.organization.id) not in creator_orgs:
+                    raise serializers.ValidationError(
+                        "You can only create users in your own organization."
+                    )
+                # Store validated department
+                data['_department'] = dept
+            except Department.DoesNotExist:
+                raise serializers.ValidationError("Department does not exist.")
 
-        # Validate role
-        role_name = data.get("role", "User")
+        # Validate wing belongs to creator's organization (via department)
+        wing_id = data.get("wing")
+        if wing_id:
+            try:
+                wing = Wing.objects.get(id=wing_id)
+                # If user has org restrictions, check if wing belongs to one of them
+                if creator_orgs and str(wing.department.organization.id) not in creator_orgs:
+                    raise serializers.ValidationError(
+                        "You can only create users in your own organization."
+                    )
+                # Store validated wing
+                data['_wing'] = wing
+                # Also ensure department matches
+                if dept_id and str(wing.department.id) != str(dept_id):
+                    raise serializers.ValidationError(
+                        "Wing must belong to the specified department."
+                    )
+            except Wing.DoesNotExist:
+                raise serializers.ValidationError("Wing does not exist.")
+
+        # Validate role - restrict based on creator's role
+        role_name = data.get("role", "User").title()
+        
+        # Store creator info for role validation in create()
+        data['_creator_membership'] = membership
+        data['_creator_orgs'] = creator_orgs
+        
         if not Role.objects.filter(name__iexact=role_name).exists():
             raise serializers.ValidationError(f"Role '{role_name}' does not exist.")
 
@@ -99,30 +146,34 @@ class SignupSerializer(serializers.Serializer):
         entity = None
 
         # -------- ENTITY RESOLUTION -------- #
-
-        department_id = validated_data.get("department")
-        organization_id = validated_data.get("organization")
-        domain_id = validated_data.get("domain")
-
-        if department_id:
-
-            dept = Department.objects.get(id=department_id)
+        # Use validated data from context (already verified to belong to creator's org)
+        
+        # Check for pre-validated department from validate()
+        dept = validated_data.get('_department')
+        wing = validated_data.get('_wing')
+        
+        if wing:
+            # User belongs to a wing
+            entity = wing
+        elif dept:
+            # User belongs to a department (no wing)
             entity = dept
-
+            
+            # If wing_name is provided, create the wing under this department
             wing_name = validated_data.get("wing_name")
-
             if wing_name:
                 wing, _ = Wing.objects.get_or_create(
                     department=dept,
                     name=wing_name
                 )
                 entity = wing
-
-        elif organization_id:
-            entity = Organization.objects.get(id=organization_id)
-
-        elif domain_id:
-            entity = Domain.objects.get(id=domain_id)
+        else:
+            # Fallback: derive from creator's membership
+            request = self.context.get('request')
+            if request and request.user:
+                membership = Membership.objects.filter(user=request.user).first()
+                if membership:
+                    entity = membership.entity
 
         # -------- CREATE MEMBERSHIP -------- #
 

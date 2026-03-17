@@ -1,4 +1,5 @@
 from rest_framework.routers import DefaultRouter
+from django.urls import path, include
 from .views import (
     DomainViewSet, OrganizationViewSet, DepartmentViewSet,
     WingViewSet, RoleViewSet, MembershipViewSet
@@ -12,4 +13,6 @@ router.register('wings', WingViewSet)
 router.register('roles', RoleViewSet)
 router.register('memberships', MembershipViewSet)
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('', include(router.urls)),
+]
