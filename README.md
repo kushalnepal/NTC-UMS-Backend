@@ -1,6 +1,6 @@
 # NTC User Management System - Backend
 
-A robust Django REST API backend for the NTC User Management System, providing secure authentication, user management, and organization hierarchy features.
+A robust Django REST API backend for the NTC User Management System, providing secure authentication, multi-level organization hierarchy, role-based access control, and comprehensive user management.
 
 [![Django](https://img.shields.io/badge/Django-6.0-green)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/)
@@ -12,29 +12,44 @@ A robust Django REST API backend for the NTC User Management System, providing s
 ### User Authentication
 
 - JWT-based authentication using djangorestframework-simplejwt
-- Custom user model with extended fields
+- Custom user model supporting username, email, and phone login
 - Secure password hashing
-- Login/Logout functionality
+- Login/Logout functionality with token refresh
+- Multi-domain support in tokens
+
+### Admin Request System
+
+- Public endpoint for requesting admin access to organizations
+- Support for requesting admin role at Organization, Department, or Wing level
+- Automatic membership creation upon approval
+
+### Multi-Level Organization Hierarchy
+
+- **Domain** - Root level (e.g., "NTC")
+- **Organization** - Companies under a domain (e.g., "NTC Telecom")
+- **Department** - Departments within an organization (e.g., "IT Department")
+- **Wing** - Sub-units within departments (e.g., "Software Wing")
+
+### Role-Based Access Control
+
+- **Admin** - Full CRUD permissions on users and hierarchy
+- **User** - Read-only access to hierarchy data
+- Custom roles with JSON permissions support
+- Generic Foreign Key for flexible entity relationships
 
 ### User Management
 
 - Create, Read, Update, Delete users
-- Role-based permissions
+- User profile management
+- Multi-membership support (users can belong to multiple entities)
 - User search and filtering
-- Profile management
-
-### Organization Management
-
-- Hierarchical organization structure
-- Department management
-- Employee-organization relationships
 
 ### API Features
 
 - RESTful API design
-- Token-based authentication
+- Token-based authentication (JWT)
 - CORS support for frontend integration
-- Comprehensive API endpoints
+- Comprehensive API endpoints for all entities
 
 ## 🛠️ Tech Stack
 
@@ -122,7 +137,7 @@ python/
 ├── organization/              # Organization app
 │   ├── migrations/
 │   ├── admin.py
-│   ├── models.py             # Organization models
+│   ├── models.py             # Organization models (Domain, Organization, Department, Wing, Role, Membership)
 │   ├── serializers.py
 │   ├── urls.py
 │   └── views.py
@@ -140,30 +155,52 @@ python/
 
 ### Authentication
 
-| Method | Endpoint                   | Description         |
-| ------ | -------------------------- | ------------------- |
-| POST   | `/api/auth/register/`      | Register a new user |
-| POST   | `/api/auth/login/`         | User login          |
-| POST   | `/api/auth/logout/`        | User logout         |
-| POST   | `/api/auth/token/`         | Obtain JWT token    |
-| POST   | `/api/auth/token/refresh/` | Refresh JWT token   |
+| Method | Endpoint                      | Description                                |
+| ------ | ----------------------------- | ------------------------------------------ |
+| POST   | `/api/v1/auth/signup/`        | Register a new user with membership        |
+| POST   | `/api/v1/auth/login/`         | User login (supports username/email/phone) |
+| POST   | `/api/v1/auth/admin-request/` | Request admin access to an entity          |
+| POST   | `/api/v1/auth/token/`         | Obtain JWT token                           |
+| POST   | `/api/v1/auth/token/refresh/` | Refresh JWT token                          |
+| POST   | `/api/v1/auth/token/verify/`  | Verify JWT token                           |
+
+### Hierarchy
+
+| Method | Endpoint                                    | Description                         |
+| ------ | ------------------------------------------- | ----------------------------------- |
+| GET    | `/api/v1/auth/hierarchy/`                   | Get user's accessible hierarchy     |
+| GET    | `/api/v1/auth/hierarchy-members/`           | Get all members in user's hierarchy |
+| POST   | `/api/v1/auth/hierarchy-members/`           | Create user (Admin only)            |
+| PUT    | `/api/v1/auth/hierarchy-members/<user_id>/` | Update user (Admin only)            |
+| DELETE | `/api/v1/auth/hierarchy-members/<user_id>/` | Delete user (Admin only)            |
 
 ### Users
 
-| Method | Endpoint                | Description      |
-| ------ | ----------------------- | ---------------- |
-| GET    | `/api/auth/users/`      | List all users   |
-| GET    | `/api/auth/users/{id}/` | Get user details |
-| PUT    | `/api/auth/users/{id}/` | Update user      |
-| DELETE | `/api/auth/users/{id}/` | Delete user      |
+| Method | Endpoint                   | Description      |
+| ------ | -------------------------- | ---------------- |
+| GET    | `/api/v1/auth/users/`      | List all users   |
+| GET    | `/api/v1/auth/users/{id}/` | Get user details |
+| POST   | `/api/v1/auth/users/`      | Create user      |
+| PUT    | `/api/v1/auth/users/{id}/` | Update user      |
+| DELETE | `/api/v1/auth/users/{id}/` | Delete user      |
 
-### Organizations
+### Organization
 
-| Method | Endpoint                       | Description                |
-| ------ | ------------------------------ | -------------------------- |
-| GET    | `/api/organization/hierarchy/` | Get organization hierarchy |
-| GET    | `/api/organization/`           | List organizations         |
-| POST   | `/api/organization/`           | Create organization        |
+| Method | Endpoint                              | Description               |
+| ------ | ------------------------------------- | ------------------------- |
+| GET    | `/api/v1/domains/`                    | List all domains          |
+| POST   | `/api/v1/domains/`                    | Create domain             |
+| GET    | `/api/v1/organizations/`              | List organizations        |
+| POST   | `/api/v1/organizations/`              | Create organization       |
+| GET    | `/api/v1/departments/`                | List departments          |
+| POST   | `/api/v1/departments/`                | Create department         |
+| GET    | `/api/v1/departments/{id}/hierarchy/` | Get department with wings |
+| GET    | `/api/v1/wings/`                      | List wings                |
+| POST   | `/api/v1/wings/`                      | Create wing               |
+| GET    | `/api/v1/roles/`                      | List roles                |
+| POST   | `/api/v1/roles/`                      | Create role               |
+| GET    | `/api/v1/memberships/`                | List memberships          |
+| POST   | `/api/v1/memberships/`                | Create membership         |
 
 ## 🔐 Authentication
 
@@ -176,7 +213,7 @@ Authorization: Bearer <your-token-here>
 ### Obtaining a Token
 
 ```bash
-curl -X POST http://localhost:8000/api/auth/token/ \
+curl -X POST http://localhost:8000/api/v1/auth/token/ \
   -H "Content-Type: application/json" \
   -d '{"username": "your-username", "password": "your-password"}'
 ```
@@ -184,10 +221,33 @@ curl -X POST http://localhost:8000/api/auth/token/ \
 ### Refreshing a Token
 
 ```bash
-curl -X POST http://localhost:8000/api/auth/token/refresh/ \
+curl -X POST http://localhost:8000/api/v1/auth/token/refresh/ \
   -H "Content-Type: application/json" \
   -d '{"refresh": "your-refresh-token"}'
 ```
+
+## 📊 Data Models
+
+### User
+
+- `id` (UUID)
+- `username` (unique, optional)
+- `email` (unique, optional)
+- `phone` (unique, optional)
+- `is_active`, `is_staff`, `is_superuser`
+- `date_joined`
+
+### Organization Hierarchy
+
+- **Domain**: Root entity (e.g., "NTC")
+- **Organization**: Belongs to Domain (e.g., "NTC Telecom")
+- **Department**: Belongs to Organization
+- **Wing**: Belongs to Department
+
+### Role & Membership
+
+- **Role**: Name + JSON permissions
+- **Membership**: Links User to any entity (Domain/Organization/Department/Wing) with a Role
 
 ## 🧪 Testing
 
@@ -255,7 +315,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👨‍💻 Author
 
-Your Name - [GitHub](https://github.com/yourusername)
+Kushal Nepal - [GitHub](https://github.com/kushalnepal)
 
 ## 🙏 Acknowledgments
 
