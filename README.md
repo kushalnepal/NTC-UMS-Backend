@@ -2,35 +2,39 @@
 
 A robust Django REST API backend for the NTC User Management System, providing secure authentication, user management, and organization hierarchy features.
 
-![Django](https://img.shields.io/badge/Django-6.0-green)
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB)
-![DRF](https://img.shields.io/badge/Django%20REST%20Framework-3.14-red)
-![License](https://img.shields.io/badge/License-MIT-green)
+[![Django](https://img.shields.io/badge/Django-6.0-green)](https://www.djangoproject.com/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/)
+[![DRF](https://img.shields.io/badge/Django%20REST%20Framework-3.15-red)](https://www.django-rest-framework.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 ## 🚀 Features
 
-- **User Authentication**
-  - JWT-based authentication using djangorestframework-simplejwt
-  - Custom user model with extended fields
-  - Secure password hashing
-  - Login/Logout functionality
+### User Authentication
 
-- **User Management**
-  - Create, Read, Update, Delete users
-  - Role-based permissions
-  - User search and filtering
-  - Profile management
+- JWT-based authentication using djangorestframework-simplejwt
+- Custom user model with extended fields
+- Secure password hashing
+- Login/Logout functionality
 
-- **Organization Management**
-  - Hierarchical organization structure
-  - Department management
-  - Employee-organization relationships
+### User Management
 
-- **API Features**
-  - RESTful API design
-  - Token-based authentication
-  - CORS support for frontend integration
-  - Comprehensive API endpoints
+- Create, Read, Update, Delete users
+- Role-based permissions
+- User search and filtering
+- Profile management
+
+### Organization Management
+
+- Hierarchical organization structure
+- Department management
+- Employee-organization relationships
+
+### API Features
+
+- RESTful API design
+- Token-based authentication
+- CORS support for frontend integration
+- Comprehensive API endpoints
 
 ## 🛠️ Tech Stack
 
@@ -50,54 +54,54 @@ Before running this project, ensure you have the following installed:
 
 ## 🔧 Installation
 
-1. Clone the repository:
+Clone the repository:
 
-   ```bash
-   git clone <repository-url>
-   cd python
-   ```
+```bash
+git clone <repository-url>
+cd python
+```
 
-2. Create a virtual environment:
+Create a virtual environment:
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-3. Install dependencies:
+Install dependencies:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-4. Configure environment variables:
+Configure environment variables:
 
-   ```bash
-   # Create .env file (optional)
-   DEBUG=True
-   SECRET_KEY=your-secret-key
-   ALLOWED_HOSTS=localhost,127.0.0.1
-   ```
+```bash
+# Create .env file (optional)
+DEBUG=True
+SECRET_KEY=your-secret-key
+ALLOWED_HOSTS=localhost,127.0.0.1
+```
 
-5. Run migrations:
+Run migrations:
 
-   ```bash
-   python manage.py migrate
-   ```
+```bash
+python manage.py migrate
+```
 
-6. Create a superuser:
+Create a superuser:
 
-   ```bash
-   python manage.py createsuperuser
-   ```
+```bash
+python manage.py createsuperuser
+```
 
-7. Start the development server:
+Start the development server:
 
-   ```bash
-   python manage.py runserver
-   ```
+```bash
+python manage.py runserver
+```
 
-8. Open [http://localhost:8000](http://localhost:8000) in your browser.
+Open http://localhost:8000 in your browser.
 
 ## 🏗️ Project Structure
 
@@ -165,7 +169,7 @@ python/
 
 This API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
 
-```http
+```
 Authorization: Bearer <your-token-here>
 ```
 
@@ -215,7 +219,7 @@ gunicorn storefront.wsgi:application --bind 0.0.0.0:8000
 
 ### Using Docker
 
-Create a `Dockerfile`:
+Create a Dockerfile:
 
 ```dockerfile
 FROM python:3.10-slim
@@ -229,7 +233,7 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 ### Production Settings
 
-Update [`storefront/settings.py`](python/storefront/settings.py) for production:
+Update `storefront/settings.py` for production:
 
 ```python
 DEBUG = False
@@ -247,7 +251,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 👨‍💻 Author
 
@@ -255,10 +259,10 @@ Your Name - [GitHub](https://github.com/yourusername)
 
 ## 🙏 Acknowledgments
 
-- [Django Documentation](https://docs.djangoproject.com)
-- [Django REST Framework](https://www.django-rest-framework.org)
-- [Simple JWT](https://django-rest-framework-simplejwt.readthedocs.io)
+- [Django Documentation](https://docs.djangoproject.com/)
+- [Django REST Framework](https://www.django-rest-framework.org/)
+- [Simple JWT](https://django-rest-framework-simplejwt.readthedocs.io/)
 
 ---
 
-<p align="center">Built with ❤️ using Django</p>
+Built with ❤️ using Django
